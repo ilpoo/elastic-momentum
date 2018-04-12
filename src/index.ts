@@ -1,108 +1,28 @@
 import bind from "bind-decorator";
-
-export const linear = (x: number) => x;
-export const ease = (x: number) => 0.5 - Math.cos(x * Math.PI) / 2;
-export const easeIn = (x: number) => 1 - Math.cos(x * Math.PI / 2);
-export const easeOut = (x: number) => 1 - Math.sin(x * Math.PI / 2);
-export const elasticOut = (x: number) =>
-  1 -
-  Math.cos(8 * x ** 2 * Math.PI) * (Math.cos(x * Math.PI) * 0.05 + 0.95) ** 40;
-export const elasticIn = (x: number) => flip(elasticOut)(x);
-export const bounceOut = (x: number) =>
-  1 -
-  Math.abs(Math.cos(10.9956 * x ** 2)) *
-    (Math.cos(x * Math.PI) * 0.05 + 0.95) ** 30;
-export const BounceIn = (x: number) => flip(bounceOut)(x);
-export const overshootIn = (x: number, s = 1.70158) =>
-  x ** 2 * ((s + 1) * x - s);
-export const overshootOut = (x: number) => flip(overshootIn)(x);
-export const sharpIncline = (v: number) => (x: number) =>
-  0.5 -
-  ((1 + v ** 2) / (1 + v ** 2 * Math.cos(x * Math.PI) ** 2)) ** 0.5 *
-    Math.cos(x * Math.PI) /
-    2;
-
-export const flipX = (f: NumericFunction) => (x: number): number => 1 - f(x);
-export const flipY = (f: NumericFunction) => (x: number): number => f(1 - x);
-export const flip = (f: NumericFunction) => (x: number): number =>
-  flipX(flipY(f))(x);
-export const mergeCurves = (
-  f1: NumericFunction,
-  f2: NumericFunction,
-  f3: NumericFunction = ease
-) => (x: number): number => f1(x) * flipX(f3)(x) + f2(x) * f3(x);
-const mergeCurveToLine = (angle: number, curve: NumericFunction) =>
-  mergeCurves((n: number) => Math.tan(angle) * n, curve);
+import NumericOperator from "./Interfaces/NumericOperator";
+import AnimationResolution from "./Interfaces/AnimationResolution";
+import Renderer from "./Interfaces/Renderer";
+import { ResolveFunction, RejectFunction, PromiseFunctions } from "./Interfaces/Promises";
+import { linear } from "./easings";
+import { flipY, mergeCurveToLine } from "./helpers";
+import { ValidatedAnimation, AnimationOptions, AnimationInput } from "./Interfaces/Animation";
+export * from "./easings";
+export * from "./helpers";
 
 const isNatural = (x: number) => !isNaN(x) && x > 0 && x % 1 === 0;
 const isWhole = (x: number) => isNatural(x) || x === Infinity || x === 0;
 
-export interface animation {
-  duration?: number;
-  easing?: NumericFunction;
-  loop?: number;
-  alternate?: boolean;
-  start?: number;
-  target?: number;
-}
-
-export interface NumericFunction {
-  (x: number): number;
-}
-
-export interface Renderer {
-  (value: number, details: animationResolution): any;
-}
-
-export interface animationOptions {
-  duration: number;
-  easing: NumericFunction;
-  loop: number;
-  alternate: boolean;
-  start: number;
-  target: number;
-}
-
-export interface ResolveFunction {
-  (returns: Animation): void;
-}
-
-export interface RejectFunction {
-  (reason?: any): void;
-}
-
-export interface PromiseFunctions {
-  resolve: ResolveFunction;
-  reject: RejectFunction;
-}
-
-export interface validatedAnimation extends animationOptions {
-  promise: PromiseFunctions;
-  fn: Renderer;
-  startTime: number;
-  iterations: number;
-}
-
-export interface animationResolution {
-  deltaTime?: number;
-  percentTime?: number;
-  value?: number;
-  percentValue?: number;
-  deltaValue?: number;
-  tangent?: number;
-}
-
 export default class Animation {
   _paused: boolean = true;
-  _queue: validatedAnimation[] = [];
+  _queue: ValidatedAnimation[] = [];
   _tangent: number = 0;
   _deltaTime: number = 0;
   _deltaValue: number = 0;
-  _defaults: animationOptions;
+  _defaults: AnimationOptions;
   _nextFrame: number = -1;
   _pauseTime: number = 0;
 
-  constructor(defaults: animation) {
+  constructor(defaults: AnimationInput) {
     this._defaults = Object.assign(
       {
         duration: 300,
@@ -119,7 +39,7 @@ export default class Animation {
   @bind
   _nextStep() {
     const currentAnimation = this._queue[0];
-    const result: animationResolution = {};
+    const result: AnimationResolution = {};
     result.deltaTime = Date.now() - currentAnimation.startTime;
     result.percentTime = Math.min(
       result.deltaTime / currentAnimation.duration,
@@ -185,8 +105,8 @@ export default class Animation {
       alternate = this._defaults.alternate,
       start = this._defaults.start,
       target = this._defaults.target
-    }: animation
-  ): validatedAnimation {
+    }: AnimationInput
+  ): ValidatedAnimation {
     console.assert(
       typeof fn === `function`,
       `First parameter needs to be a function`
@@ -245,7 +165,7 @@ export default class Animation {
     return this._paused;
   }
 
-  animate(fn: Renderer, options: animation = {}): Promise<Animation> {
+  animate(fn: Renderer, options: AnimationInput = {}): Promise<Animation> {
     return new Promise((resolve: ResolveFunction, reject: RejectFunction) => {
       if (this._queue.length < 1) {
         this.stop(`Animation changed before it was completed`);
@@ -258,7 +178,7 @@ export default class Animation {
     });
   }
 
-  queue(fn: Renderer, options: animation = {}): Promise<Animation> {
+  queue(fn: Renderer, options: AnimationInput = {}): Promise<Animation> {
     return new Promise((resolve: ResolveFunction, reject: RejectFunction) => {
       const promise = { resolve, reject };
       if (this._queue.length < 1) {
