@@ -8,6 +8,20 @@
 
 `elastic-momentum` is a light-weight animation library for JavaScript. The library doesn't do any rendering - you'll have to do that yourself. The library is only conerned with timing the animation.
 
+## Table of Contents
+- [Installation](#installation)
+- [Usage](#usage)
+- [Options](#options)
+- [Properties](#properties)
+- [Overwriting default values](#overwriting-default-values)
+- [Running functions after the animation completes](#running-functions-after-the-animation-completes)
+- [Chaining animations](#chaining-animations)
+- [Modifying loops](#modifying-loops)
+- [Inspecting the queue](#inspecting-the-queue)
+- [Stopping the animation](#stopping-the-animation)
+- [Easings](#easings)
+- [Helper functions](#helper-functions)
+
 ## Installation
 
 —
@@ -40,19 +54,19 @@ animation.animate(renderer, {
   alternate: true
 });
 ```
-You can think of easings as putting in a mathematical formula to control the timing of the function: in our above example the easing function is y = x^2. 
+*See [Options](#options) for all.*
 
 ## Options
 
 option | type | default | description
 -------|------|---------|------------
-easing | function | x => x | Controls how your animation is timed. This can be any function that takes a number between 0 and 1 and outputs another number between 0 and 1 (or in cases of overshooting, less or more).  See *easings* for more built-in easing functions.
-duration | number | 300 | controls how long the animation lasts in milliseconds
-loop | number | 0 | controls how many times your animation is repeated. Setting this to 0 runs the animation once. Setting this to Infinity runs the animation indefinitely.
-alternate | boolean | false | controls wether the animation should be reversed on every other loop
-reject | boolean | false | controls wether the promise of an animation should be rejected when the animation is intercepted.
-start | number | 0 | what value the animation should yield when easing(x)==0
-target | number | 1 | what value the animation should yield when easing(x)==1
+easing | function | `x => x` | Controls how your animation is timed. This can be any function that takes a number between 0 and 1 and outputs another number between 0 and 1 (or in cases of overshooting, less or more).  See [*easings*](#easings) for more built-in easing functions.
+duration | number | `300` | How long the animation lasts in milliseconds.
+loop | number | `0` | How many times your animation should be repeated. Setting this to `0` runs the animation once. Setting this to `Infinity` runs the animation indefinitely.
+alternate | boolean | `false` | Controls wether the animation should be reversed on every other loop
+reject | boolean | `false` | Controls wether the promise of an animation should be rejected when the animation is intercepted.
+start | number | `0` | What value the animation should yield when `easing(x) == 0`.
+target | number | `1` | What value the animation should yield when `easing(x) == 1`.
 
 *Each field is optional.*
 
@@ -60,14 +74,14 @@ target | number | 1 | what value the animation should yield when easing(x)==1
 
 property | type | description
 ---|---|---
-animate() | (options: Options): Promise\<this> | runs an animation.
-queue() | (options: Options): Promise\<this> | queues an animation.
-currentQueue | Animation[] | lists currently queued animations.
+animate() | (options: Options): Promise\<this> | Runs an animation immediately. *See [Chaining animations](#chaining-animations).*
+queue() | (options: Options): Promise\<this> | Queues an animation to be run when other animations have finished running. *See [Chaining animations](#chaining-animations).*
+currentQueue | Animation[] | Lists currently queued animations. *See [Inspecting the queue](#inspecting-the-queue).*
 pause() | (): this | Pauses the animation.
 resume() | (): this | Resumes the paused animation.
-stop() | (reason?: string): this | Stops the animation and clears the queue
-clearQueue() | (clearLoop?: boolean = false): this | Clears all the animations from the queue but runs the current animation to completion. If the current animation is set to loop, you can prevent it from looping by passing `true`.
-modifyLoop() | (iterations?: number = 0, which?: number = 0): this | Modifies the amount of times an animation should loop. Iterations controls how many times you want it to loop and which points to the index of the animation in the queue.
+stop() | (reason?: string): this | Stops the animation and clears the queue. *See [Stopping the animation](#stopping-the-animation).*
+clearQueue() | (clearLoop?: boolean = false): this | Clears all the animations from the queue but runs the current animation to completion. If the current animation is set to loop, you can prevent it from looping by passing `true`. *See [Chaining animations](#chaining-animations).*
+loop() | (iterations?: number = 0, which?: number = 0): this | Modifies the amount of times an animation should loop. `iterations` controls how many times you want it to loop and `which` points to the index of the animation in the queue. *See [Modifying loops](#modifying-loops).*
 
 ## Overwriting default values
 
@@ -161,7 +175,9 @@ animation.stop();
 ```
 
 
-## Easings:
+## Easings
+
+You can think of easings as putting in a mathematical formula to control the timing of the function. For example, the easing function is y = x² would be put in as `x => x**2`. 
 
 The library comes with a few basic easing functions.
 
