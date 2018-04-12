@@ -1,0 +1,27 @@
+{
+  "name": "elastic-momentum",
+  "version": "0.1.0",
+  "description": "An animation library.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "dependencies": {},
+  "devDependencies": {
+    "bind-decorator": "^1.0.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilpoo/elastic-momentum.git"
+  },
+  "keywords": [
+    "animation"
+  ],
+  "author": "ilpo.oksanen@outlook.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ilpoo/elastic-momentum/issues"
+  },
+  "homepage": "https://github.com/ilpoo/elastic-momentum#readme"
+}
