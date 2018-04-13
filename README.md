@@ -127,6 +127,8 @@ The above example will queue renderer and renderer2 to be ran after one-other.
 
 Note that `.animate()` will always start the animation immediately, even if there is another animation in progress - it'll just abort whatever is in progress and clear the queue. Using `.queue()` when there are no animations in progress simply starts the animation right-away like `.animate()` would.
 
+`.animate()` doesn't just stop the previous animation, but transitions smoothly from it to the newly requested animation so that the animation looks natural even when changed mid-way through. If this behaviour is undesireable, you can call `.stop().animate()` to get a clean start for your animation or `.easedStop().queue()` to ease the animation to a halt at the current value and then start the new animation.
+
 If you cange your mind, you can also clear the queue:
 
 ```js

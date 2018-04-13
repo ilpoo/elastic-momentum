@@ -13,16 +13,18 @@ const isNatural = (x: number) => !isNaN(x) && x > 0 && x % 1 === 0;
 const isWhole = (x: number) => isNatural(x) || x === Infinity || x === 0;
 
 export default class Animation {
-  _paused: boolean = true;
   _queue: ValidatedAnimation[] = [];
-  _tangent: number = 0;
-  _deltaTime: number = 0;
-  _deltaValue: number = 0;
   _defaults: AnimationOptions;
-  _nextFrame: number = -1;
-  _pauseTime: number = 0;
+  _paused = true;
+  _tangent = 0;
+  _deltaTime = 0;
+  _deltaValue = 0;
+  _pendingFrame = -1;
+  _pauseTime = 0;
 
-  constructor(defaults: AnimationInput) {
+  constructor(
+    defaults: AnimationInput
+  ) {
     this._defaults = Object.assign(
       {
         duration: 300,
@@ -30,21 +32,18 @@ export default class Animation {
         loop: 0,
         alternate: false,
         start: 0,
-        target: 1
+        target: 1,
       },
       defaults
     );
   }
 
   @bind
-  _nextStep() {
+  _nextFrame() {
     const currentAnimation = this._queue[0];
     const result: AnimationResolution = {};
     result.deltaTime = Date.now() - currentAnimation.startTime;
-    result.percentTime = Math.min(
-      result.deltaTime / currentAnimation.duration,
-      1
-    );
+    result.percentTime = Math.min(result.deltaTime / currentAnimation.duration, 1);
     if (currentAnimation.iterations % 2 === 1 && currentAnimation.alternate) {
       result.percentValue = flipY(currentAnimation.easing)(result.percentTime);
     } else {
@@ -52,16 +51,13 @@ export default class Animation {
     }
     result.deltaValue = result.percentValue * currentAnimation.target;
     result.value = result.deltaValue + currentAnimation.start;
-    this._tangent = result.tangent = Math.atan2(
-      result.deltaValue - this._deltaValue,
-      result.deltaTime - this._deltaTime
-    );
+    this._tangent = result.tangent = Math.atan2(result.deltaValue - this._deltaValue, result.deltaTime - this._deltaTime);
     this._deltaValue = result.deltaValue;
     this._deltaTime = result.deltaTime;
     currentAnimation.fn(result.value, result);
 
     if (result.percentTime < 1) {
-      this._nextFrame = requestAnimationFrame(this._nextStep);
+      this._pendingFrame = requestAnimationFrame(this._nextFrame);
     } else if (currentAnimation.loop) {
       currentAnimation.loop--;
       currentAnimation.iterations++;
@@ -81,7 +77,7 @@ export default class Animation {
     this._queue.forEach(animation => {
       animation.promise.reject({
         message: reason,
-        animation: this
+        animation: this,
       });
     });
   }
@@ -89,10 +85,9 @@ export default class Animation {
   _startNext() {
     this._queue[0].startTime = Date.now();
     this._paused = false;
-    this._deltaValue =
-      this._queue[0].easing(0) * this._queue[0].target + this._queue[0].start;
+    this._deltaValue = this._queue[0].easing(0) * this._queue[0].target + this._queue[0].start;
     this._deltaTime = 0;
-    this._nextFrame = requestAnimationFrame(this._nextStep);
+    this._pendingFrame = requestAnimationFrame(this._nextFrame);
   }
 
   _validate(
@@ -107,23 +102,11 @@ export default class Animation {
       target = this._defaults.target
     }: AnimationInput
   ): ValidatedAnimation {
-    console.assert(
-      typeof fn === `function`,
-      `First parameter needs to be a function`
-    );
-    console.assert(
-      typeof easing === `function`,
-      `"easing" needs to be a function`
-    );
+    console.assert(typeof fn === `function`, `First parameter needs to be a function`);
+    console.assert(typeof easing === `function`, `"easing" needs to be a function`);
     console.assert(isNatural(duration), `"duration" must be positive integer`);
-    console.assert(
-      isWhole(loop),
-      `"loop" must be positive integer, zero or Infinity`
-    );
-    console.assert(
-      typeof alternate === "boolean",
-      `"alternate" must be boolean`
-    );
+    console.assert(isWhole(loop), `"loop" must be positive integer, zero or Infinity`);
+    console.assert(typeof alternate === "boolean", `"alternate" must be boolean`);
     return {
       fn,
       easing,
@@ -134,11 +117,14 @@ export default class Animation {
       target,
       startTime: 0,
       iterations: 0,
-      promise
+      promise,
     };
   }
 
-  loop(iterations = 0, which = 0) {
+  loop(
+    iterations = 0,
+    which = 0
+  ) {
     this._queue[which].loop = iterations;
     return this;
   }
@@ -147,16 +133,16 @@ export default class Animation {
     if (!this._paused) {
       this._paused = true;
       this._pauseTime = Date.now();
-      cancelAnimationFrame(this._nextFrame);
+      cancelAnimationFrame(this._pendingFrame);
     }
     return this;
   }
 
   resume() {
-    if (this._paused) {
+    if (this._paused && this.queue.length) {
       this._paused = false;
       this._queue[0].startTime += Date.now() - this._pauseTime;
-      this._nextFrame = requestAnimationFrame(this._nextStep);
+      this._pendingFrame = requestAnimationFrame(this._nextFrame);
     }
     return this;
   }
@@ -165,7 +151,10 @@ export default class Animation {
     return this._paused;
   }
 
-  animate(fn: Renderer, options: AnimationInput = {}): Promise<Animation> {
+  animate(
+    fn: Renderer,
+    options: AnimationInput = {}
+  ): Promise<Animation> {
     return new Promise((resolve: ResolveFunction, reject: RejectFunction) => {
       if (this._queue.length < 1) {
         this.stop(`Animation changed before it was completed`);
@@ -178,17 +167,17 @@ export default class Animation {
     });
   }
 
-  queue(fn: Renderer, options: AnimationInput = {}): Promise<Animation> {
+  queue(
+    fn: Renderer,
+    options: AnimationInput = {}
+  ): Promise<Animation> {
     return new Promise((resolve: ResolveFunction, reject: RejectFunction) => {
       const promise = { resolve, reject };
       if (this._queue.length < 1) {
-        if (
-          this._queue.reduce((acc, curr) => (curr.loop || 0) + acc, 0) ===
-          Infinity
-        ) {
+        if (this._queue.reduce((acc, curr) => (curr.loop || 0) + acc, 0) === Infinity) {
           reject({
-            message: `An animation in the queue is set to loop infinitely, so requested animation would never be executed. Consider using .modifyLoop() or .clearQueue() before queuing.`,
-            animation: this
+            message: `An animation in the queue is set to loop infinitely, so requested animation would never be executed. Consider using .loop() or .clearQueue() before queuing.`,
+            animation: this,
           });
         } else {
           this._queue.push(this._validate(fn, promise, options));
@@ -200,7 +189,9 @@ export default class Animation {
     });
   }
 
-  clearQueue(resetLoop = false) {
+  clearQueue(
+    resetLoop = false
+  ) {
     this._queue = this._queue.slice(0, 1);
     if (resetLoop) {
       this.loop(0);
@@ -212,8 +203,10 @@ export default class Animation {
     return this._queue;
   }
 
-  stop(reason = `Animation stopped manually`) {
-    cancelAnimationFrame(this._nextFrame);
+  stop(
+    reason = `Animation stopped manually`
+  ) {
+    cancelAnimationFrame(this._pendingFrame);
     this._rejectAll(reason);
     this._queue = [];
     this._paused = true;
