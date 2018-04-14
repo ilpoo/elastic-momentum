@@ -13,17 +13,17 @@ const isNatural = (x: number) => !isNaN(x) && x > 0 && x % 1 === 0;
 const isWhole = (x: number) => isNatural(x) || x === Infinity || x === 0;
 
 export default class Animation {
-  _queue: ValidatedAnimation[] = [];
-  _defaults: AnimationOptions;
-  _paused = true;
-  _tangent = 0;
-  _deltaTime = 0;
-  _deltaValue = 0;
-  _pendingFrame = -1;
-  _pauseTime = 0;
+  private _queue: ValidatedAnimation[] = [];
+  private _defaults: AnimationOptions;
+  private _paused = true;
+  private _tangent = 0;
+  private _deltaTime = 0;
+  private _deltaValue = 0;
+  private _pendingFrame = -1;
+  private _pauseTime = 0;
 
   constructor(
-    defaults: AnimationInput
+    defaults: AnimationInput = {}
   ) {
     this._defaults = Object.assign(
       {
@@ -39,41 +39,56 @@ export default class Animation {
   }
 
   @bind
-  _nextFrame() {
+  private _nextFrame() {
     const currentAnimation = this._queue[0];
-    const result: AnimationResolution = {};
-    result.deltaTime = Date.now() - currentAnimation.startTime;
-    result.percentTime = Math.min(result.deltaTime / currentAnimation.duration, 1);
-    if (currentAnimation.iterations % 2 === 1 && currentAnimation.alternate) {
-      result.percentValue = flipY(currentAnimation.easing)(result.percentTime);
-    } else {
-      result.percentValue = currentAnimation.easing(result.percentTime);
-    }
-    result.deltaValue = result.percentValue * currentAnimation.target;
-    result.value = result.deltaValue + currentAnimation.start;
-    this._tangent = result.tangent = Math.atan2(result.deltaValue - this._deltaValue, result.deltaTime - this._deltaTime);
-    this._deltaValue = result.deltaValue;
-    this._deltaTime = result.deltaTime;
+    const result: AnimationResolution = this._resolveAnimation(currentAnimation);
     currentAnimation.fn(result.value, result);
 
     if (result.percentTime < 1) {
       this._pendingFrame = requestAnimationFrame(this._nextFrame);
     } else if (currentAnimation.loop) {
-      currentAnimation.loop--;
-      currentAnimation.iterations++;
-      this._startNext();
+      this._restartLoop(currentAnimation);
     } else {
-      currentAnimation.promise.resolve(this);
-      this._queue.shift();
-      if (this._queue.length > 1) {
-        this._startNext();
-      } else {
-        this._paused = true;
-      }
+      this._shiftQueue();
     }
   }
 
-  _rejectAll(reason: string) {
+  private _restartLoop(currentAnimation: ValidatedAnimation) {
+    currentAnimation.loop--;
+    currentAnimation.iterations++;
+    this._startNext();
+  }
+
+  private _shiftQueue() {
+    this._queue[0].promise.resolve(this);
+    this._queue.shift();
+    if (this._queue.length > 1) {
+      this._startNext();
+    }
+    else {
+      this._paused = true;
+    }
+  }
+
+  private _resolveAnimation(currentAnimation: ValidatedAnimation): AnimationResolution {
+    const result: any = {};
+    result.deltaTime = Date.now() - currentAnimation.startTime;
+    result.percentTime = Math.min(result.deltaTime / currentAnimation.duration, 1);
+    result.percentValue = (currentAnimation.iterations % 2 === 1 && currentAnimation.alternate)
+      ? flipY(currentAnimation.easing)(result.percentTime)
+      : currentAnimation.easing(result.percentTime);
+    result.deltaValue = result.percentValue * currentAnimation.target;
+    result.value = result.deltaValue + currentAnimation.start;
+    this._tangent = result.tangent = Math.atan2(
+      result.deltaValue - this._deltaValue,
+      result.deltaTime - this._deltaTime
+    );
+    this._deltaValue = result.deltaValue;
+    this._deltaTime = result.deltaTime;
+    return result;
+  }
+
+  private _rejectAll(reason: string) {
     this._queue.forEach(animation => {
       animation.promise.reject({
         message: reason,
@@ -82,7 +97,7 @@ export default class Animation {
     });
   }
 
-  _startNext() {
+  private _startNext() {
     this._queue[0].startTime = Date.now();
     this._paused = false;
     this._deltaValue = this._queue[0].easing(0) * this._queue[0].target + this._queue[0].start;
@@ -90,7 +105,7 @@ export default class Animation {
     this._pendingFrame = requestAnimationFrame(this._nextFrame);
   }
 
-  _validate(
+  private _validate(
     fn: Renderer,
     promise: PromiseFunctions,
     {
@@ -161,8 +176,7 @@ export default class Animation {
         const newOptions = Object.assign(this._defaults, options);
         options.easing = mergeCurveToLine(this._tangent, newOptions.easing);
       }
-      const promise = { resolve, reject };
-      this._queue[0] = this._validate(fn, promise, options);
+      this._queue[0] = this._validate(fn, { resolve, reject }, options);
       this._startNext();
     });
   }
@@ -172,18 +186,8 @@ export default class Animation {
     options: AnimationInput = {}
   ): Promise<Animation> {
     return new Promise((resolve: ResolveFunction, reject: RejectFunction) => {
-      const promise = { resolve, reject };
-      if (this._queue.length < 1) {
-        if (this._queue.reduce((acc, curr) => (curr.loop || 0) + acc, 0) === Infinity) {
-          reject({
-            message: `An animation in the queue is set to loop infinitely, so requested animation would never be executed. Consider using .loop() or .clearQueue() before queuing.`,
-            animation: this,
-          });
-        } else {
-          this._queue.push(this._validate(fn, promise, options));
-        }
-      } else {
-        this._queue[0] = this._validate(fn, promise, options);
+      this._queue.push(this._validate(fn, { resolve, reject }, options));
+      if (this._queue.length === 1) {
         this._startNext();
       }
     });

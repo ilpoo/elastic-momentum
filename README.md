@@ -9,6 +9,7 @@
 `elastic-momentum` is a light-weight animation library for JavaScript. The library doesn't do any rendering - you'll have to do that yourself. The library is only conerned with timing the animation.
 
 ## Table of Contents
+
 - [Installation](#installation)
 - [Usage](#usage)
 - [Options](#options)
@@ -54,6 +55,7 @@ animation.animate(renderer, {
   alternate: true
 });
 ```
+
 *See [Options](#options) for all.*
 
 ## Options
@@ -135,13 +137,11 @@ If you cange your mind, you can also clear the queue:
 animation.clearQueue().queue(renderer);
 ```
 
-
-
 The above example will clear any queued animations, but will finish animation the animation that's currently in progress. Note that `.clearQueue()` doesn't clear any queued loops by default, so if the current animation is set to loop 5 times, it'll run 5 times before the next animation will start. If you want to just finish the current animation and don't want to loop it, you can use `.clearQueue(true)`.
 
 ## Modifying loops
 
-If one of your loops is set to loop infinitely, you won't be able to queue new animations without setting the loop to something else first. You can modify the loop count of the current animation using `.loop()`:
+You can modify the loop count of the current animation using `.loop()`:
 
 ```js
 animation.animate(renderer, { loop: Infinity });
@@ -153,8 +153,8 @@ The above code will run 3 times.
 If you need to modify the loops of animations other than what's currently running, you can supply a second parameter:
 
 ```js
-animation.animate(renderer, { loop: 2 }); //runs twice
-animation.queue(renderer, { loop: 5 }); //runs once
+animation.animate(renderer, { loop: 2 }); //runs three times
+animation.queue(renderer, { loop: 5 }); //runs twice
 animation.modifyLoop(2, 1);
 ```
 
@@ -176,24 +176,23 @@ When you need to just stop and clear everything, you can use `.stop()`:
 animation.stop();
 ```
 
-
 ## Easings
 
-You can think of easings as putting in a mathematical formula to control the timing of the function. For example, the easing function is y = x² would be put in as `x => x**2`. 
+You can think of easings as putting in a mathematical formula to control the timing of the function. For example, the easing function is y = x² would be put in as `x => x**2`.
 
 The library comes with a few basic easing functions.
 
- * linear: No easing
- * ease: A sine curve that eases the animation both in and out
- * easeIn: A sine curve that eases the animnation in
- * easeOut: A sine curve that eases the animnation out
- * elasticIn: Gives the animation a ossolating start.
- * elasticOut: Gives the animation a ossolating ending.
- * bounceIn: Gives the animatoun a bouncy start.
- * bounceOut: Gives the animatoun a bouncy ending.
- * overshoot: Takes the animation too far, "overshoots" and backs down to the appropriate value.
- * overshootIn: Backs out a bit before starting the animation - reverse of overshooting.
- * sharpIncline(v): A sharper version of the sine wave (ease). Takes in a parameter (number) to determine how sharp the curve should be. Higher = sharper. 1 = regular sine. 
+- linear: No easing
+- ease: A sine curve that eases the animation both in and out
+- easeIn: A sine curve that eases the animnation in
+- easeOut: A sine curve that eases the animnation out
+- elasticIn: Gives the animation a ossolating start.
+- elasticOut: Gives the animation a ossolating ending.
+- bounceIn: Gives the animatoun a bouncy start.
+- bounceOut: Gives the animatoun a bouncy ending.
+- overshoot: Takes the animation too far, "overshoots" and backs down to the appropriate value.
+- overshootIn: Backs out a bit before starting the animation — reverse of overshooting.
+- sharpIncline(v): A sharper version of the sine wave (ease). Takes in a parameter (number) to determine how sharp the curve should be. Higher = sharper. 1 = regular sine.
 
 Example:
 
@@ -202,8 +201,6 @@ import Animation, { elasticOut } from "elastic-momentum";
 const animation = new Animation();
 animation.animate(renderer, { easing: elasticOut });
 ```
-
-
 
 ## Helper functions
 
